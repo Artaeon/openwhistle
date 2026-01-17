@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model AdminUser {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  email        String?  @unique
+  passwordHash String   @map("password_hash")
+  isSuper      Boolean  @default(false) @map("is_super")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("admin_users")
+}
+
+model Report {
+  id                         String   @id @default(uuid())
+  accessCode                  String   @unique @map("access_code")
+  passwordHash                String   @map("password_hash")
+  status                      String   @default("NEW") // NEW, IN_PROGRESS, CLOSED
+  category                    String   @default("Sonstiges") // Report category
+  receivedConfirmationSent    Boolean  @default(false) @map("received_confirmation_sent")
+  createdAt                   DateTime @default(now()) @map("created_at")
+  messages                    Message[]
+
+  @@map("reports")
+}
+
+model Message {
+  id          String       @id @default(uuid())
+  reportId    String       @map("report_id")
+  report      Report       @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  senderType  String       @map("sender_type") // WHISTLEBLOWER, ADMIN
+  content     String
+  createdAt   DateTime     @default(now()) @map("created_at")
+  attachments Attachment[]
+
+  @@map("messages")
+}
+
+model Attachment {
+  id           String  @id @default(uuid())
+  messageId    String  @map("message_id")
+  message      Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  filePath     String  @map("file_path")
+  originalName String  @map("original_name")
+
+  @@map("attachments")
+}
+
+model SystemSetting {
+  key   String @id
+  value String
+
+  @@map("system_settings")
+}
