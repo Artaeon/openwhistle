@@ -1,0 +1,68 @@
+version: "3.8"
+
+services:
+  # Frontend - React SPA served by Nginx
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - server
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.openwhistle-client.rule=Host(`${DOMAIN_NAME}`)"
+      - "traefik.http.routers.openwhistle-client.entrypoints=websecure"
+      - "traefik.http.routers.openwhistle-client.tls.certresolver=letsencrypt"
+      - "traefik.http.services.openwhistle-client.loadbalancer.server.port=80"
+      # Security headers
+      - "traefik.http.middlewares.openwhistle-headers.headers.framedeny=true"
+      - "traefik.http.middlewares.openwhistle-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.openwhistle-headers.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.openwhistle-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.routers.openwhistle-client.middlewares=openwhistle-headers"
+    networks:
+      - traefik-public
+      - internal
+
+  # Backend - Node.js Express API
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_INIT_PASSWORD=${ADMIN_INIT_PASSWORD}
+      - DATABASE_URL=file:/app/data/whistle.db
+    volumes:
+      - sqlite-data:/app/data
+      - uploads-data:/app/uploads
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.openwhistle-api.rule=Host(`api.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.openwhistle-api.entrypoints=websecure"
+      - "traefik.http.routers.openwhistle-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.openwhistle-api.loadbalancer.server.port=3000"
+      # Security headers
+      - "traefik.http.middlewares.openwhistle-api-headers.headers.framedeny=true"
+      - "traefik.http.middlewares.openwhistle-api-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.openwhistle-api-headers.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.openwhistle-api-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.routers.openwhistle-api.middlewares=openwhistle-api-headers"
+    networks:
+      - traefik-public
+      - internal
+
+volumes:
+  sqlite-data:
+    name: openwhistle-sqlite
+  uploads-data:
+    name: openwhistle-uploads
+
+networks:
+  traefik-public:
+    external: true
+  internal:
+    driver: bridge

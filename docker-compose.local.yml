@@ -1,0 +1,45 @@
+version: "3.8"
+
+# Local development compose file - no Traefik, direct port mapping
+services:
+  # Frontend - React SPA served by Nginx
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "3001:80"
+    networks:
+      - internal
+
+  # Backend - Node.js Express API
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_INIT_PASSWORD=${ADMIN_INIT_PASSWORD}
+      - DATABASE_URL=file:/app/data/whistle.db
+    volumes:
+      - sqlite-data:/app/data
+      - uploads-data:/app/uploads
+    ports:
+      - "3000:3000"
+    networks:
+      - internal
+
+volumes:
+  sqlite-data:
+    name: openwhistle-sqlite
+  uploads-data:
+    name: openwhistle-uploads
+
+networks:
+  internal:
+    driver: bridge
