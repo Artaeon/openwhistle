@@ -15,13 +15,16 @@ Companies with 50+ employees are legally required to provide an internal reporti
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/openwhistle.git
+git clone https://github.com/Artaeon/openwhistle.git
 cd openwhistle
 
 # Copy environment template
 cp .env.example .env
 
-# Start with Docker
+# Edit .env and set your secrets
+# JWT_SECRET and ADMIN_INIT_PASSWORD are required
+
+# Start with Docker (development)
 docker compose -f docker-compose.local.yml up --build -d
 ```
 
